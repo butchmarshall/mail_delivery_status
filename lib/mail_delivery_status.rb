@@ -19,15 +19,6 @@ module MailDeliveryStatus
 		cattr_accessor :default_log_level, :logger, :log_file, :line_matches,
 						:backward, :interval
 
-		# By default, Signals INT and TERM set @exit, and the worker exits upon completion of the current job.
-		# If you would prefer to raise a SignalException and exit immediately you can use this.
-		# Be aware daemons uses TERM to stop and restart
-		# false - No exceptions will be raised
-		# :term - Will only raise an exception on TERM signals but INT will wait for the current job to finish
-		# true - Will raise an exception on TERM and INT
-		cattr_accessor :raise_signal_exceptions
-		self.raise_signal_exceptions = false
-
 		def initialize(options = {})
 			@quiet = options.key?(:quiet) ? options[:quiet] : true
 
@@ -39,7 +30,7 @@ module MailDeliveryStatus
 			self.line_matches = {
 				:sendmail => {
 					:keys => ["date", "host", "pid", "qid", "data"],
-					:regexp => /^([A-Za-z]+\s[0-9]+\s[0-9]+:[0-9]+:[0-9]+)\s([^\s]+)\s[^\[]+\[([^\]]+)\]:\s([^:]+):\s([^$]+)/
+					:regexp => /^([A-Za-z]+[\s]+[0-9]+\s[0-9]+:[0-9]+:[0-9]+)\s([^\s]+)\s[^\[]+\[([^\]]+)\]:\s([^:]+):\s([^$]+)/
 				}
 			}
 		end
@@ -74,6 +65,8 @@ module MailDeliveryStatus
 							say line
 							say e.inspect
 						end
+					else
+						say "We could not match the logger line: #{line}"
 					end
 				}
 			end
@@ -111,13 +104,4 @@ module MailDeliveryStatus
 			::ActiveRecord::Base.establish_connection
         end
 	end
-
-	#class Observer
-	#	def self.delivered_email(message)
-	#		MailDeliveryStatus::SendmailLog.create(:msgid => message.message_id)
-	#	end
-	#end
 end
-
-# Register observer so we know about all emails sent through the system
-# ActionMailer::Base.register_observer(MailDeliveryStatus::Observer)
